@@ -21,7 +21,7 @@ models = [
     RandomForestClassifier()
 ]
 
-max_features = ['sqrt', 51]
+max_features = ['sqrt',  25]
 
 gb_param_grid = { 'n_estimators': [50, 100, 200], 'learning_rate':[0.01], 'max_features':max_features}
 rf_param_grid = { 'n_estimators': [100, 200, 300], 'max_features':max_features}
@@ -41,7 +41,9 @@ for model, param_grid in zip(models,param_grids):
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred)
 
+    print()
     print(f'Model: {type(model).__name__}, best params: {best_params}')
-    print(f"Accuracy Score: {accuracy:.2f}")
-    print(f"F1 Score: {f1:.2f}")
-    print(f"Roc_auc Score: {roc_auc:.2f}\n")
+    print(f"Accuracy Score: {accuracy:.3f}")
+    print(f"F1 Score: {f1:.3f}")
+    print(f"Roc_auc Score: {roc_auc:.3f}")
+    print()
