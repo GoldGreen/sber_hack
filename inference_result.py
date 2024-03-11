@@ -35,24 +35,14 @@ def predict(array: np.ndarray) -> tuple[np.ndarray,np.ndarray]:
     return classes, prob[np.arange(len(prob)), classes]
 
 
-df = pd.read_parquet('data/untrashed_data.parquet', engine='fastparquet')
+df = pd.read_parquet('data/pred_untrashed_data.parquet', engine='fastparquet')
 
 x: np.ndarray
 y: np.ndarray
-
 x, y = df[feature_cols].values, df[target_col].values
+
 y_pred, y_prob = predict(x)
 
-df['predicted'] = y_pred
-
-df.to_parquet('data/pred_untrashed_data.parquet', engine='fastparquet')
-
-roc_auc = roc_auc_score(y, y_pred)
-accuracy = accuracy_score(y, y_pred)
-f1 = f1_score(y, y_pred)
-matrix = pd.DataFrame(confusion_matrix(y, y_pred), index=['TN', 'TP'], columns=['TN', 'TP'])
-
-print(matrix)
-print(f"Roc_auc Score: {roc_auc:.3f}")
-print(f"Accuracy Score: {accuracy:.3f}")
-print(f"F1 Score: {f1:.3f}")
+res_df = pd.DataFrame(data=np.column_stack((y_pred, y_prob)), index=df.index, columns=['target_bin', 'target_prob'])
+res_df['target_bin'] = res_df['target_bin'].astype(int)
+res_df.to_csv('data/result.csv')
