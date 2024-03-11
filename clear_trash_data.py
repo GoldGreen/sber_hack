@@ -34,10 +34,13 @@ resampled_df = removeColumns(resampled_df, feature_cols, [col for col in feature
                    
 corr = resampled_df.corr()
 upper_triangle = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
-resampled_df = removeColumns(resampled_df, feature_cols, [col for col in upper_triangle.columns if any(upper_triangle[col] > 0.7)])
+resampled_df = removeColumns(resampled_df, feature_cols, [col for col in upper_triangle.columns if any(abs(upper_triangle[col]) > 0.7)])
 
 df = df.drop(df.columns.difference(resampled_df.columns).tolist(), axis=1)
 
-print(df)
+with open("columns.txt", 'w') as f:
+    f.writelines(col+'\n' for col in feature_cols)
 
 df.to_parquet('data/untrashed_data.parquet', engine='fastparquet')
+
+print(df)
