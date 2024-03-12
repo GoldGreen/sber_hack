@@ -1,3 +1,4 @@
+from catboost import CatBoostClassifier
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -10,33 +11,19 @@ original_columns = df.columns.tolist()
 target_col = 'target'
 feature_cols = [column for column in df.columns if column not in [target_col] ]
 
-#sampler = RandomOverSampler()
-sampler = RandomUnderSampler()
+model = CatBoostClassifier(auto_class_weights = 'Balanced',  
+                           learning_rate = 0.08,    
+                           iterations = 200)
 
-x_resampled, y_resampled = sampler.fit_resample(df[feature_cols], df[target_col])
+model.fit(df[feature_cols], df[target_col])
 
-resampled_df = pd.concat([x_resampled, y_resampled], axis=1)
+feature_importance = model.feature_importances_
+important_columns = [col for col, importance in zip(feature_cols, feature_importance) if importance >=  0.05]
 
-def removeColumns(df:pd.DataFrame, feature_cols:list[str], cols:list[str]) -> pd.DataFrame:
-    for col in cols:
-        feature_cols.remove(col)
+removed_columns = df[feature_cols].columns.difference(important_columns).tolist()
 
-    return df.drop(cols, axis=1)
-
-def check_pearson(feature:pd.Series,  target:pd.Series, threshold:float):
-    not_null_series_idx = ~feature.isnull()
-
-    return abs(stats.pearsonr(feature[not_null_series_idx], target[not_null_series_idx])[0]) < threshold
-
-
-resampled_df = removeColumns(resampled_df, feature_cols, [col for col in feature_cols if resampled_df[col].nunique() == 1])
-resampled_df = removeColumns(resampled_df, feature_cols, [col for col in feature_cols if check_pearson(resampled_df[col], resampled_df[target_col], 0.15)])
-                   
-corr = resampled_df.corr()
-upper_triangle = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
-resampled_df = removeColumns(resampled_df, feature_cols, [col for col in upper_triangle.columns if any(abs(upper_triangle[col]) > 0.7)])
-
-df = df.drop(df.columns.difference(resampled_df.columns).tolist(), axis=1)
+df = df.drop(removed_columns, axis=1)
+feature_cols = [column for column in df.columns if column not in [target_col] ]
 
 with open("columns.txt", 'w') as f:
     f.writelines(col+'\n' for col in feature_cols)

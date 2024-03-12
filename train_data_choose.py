@@ -18,13 +18,13 @@ df['cluster'] = kmeans.fit_predict(df[feature_cols].values)
 df = pd.get_dummies(df, columns=['cluster'], prefix='cluster')
 feature_cols = [column for column in df.columns if column not in [target_col] ]
 
-x_train, x_val, y_train, y_val = train_test_split(df[feature_cols], df[target_col], test_size=0.05, random_state=30)
+x_train, x_val, y_train, y_val = train_test_split(df[feature_cols], df[target_col], test_size=0.1, random_state=30)
 
 param_grid = {
     'depth': [6],
     'l2_leaf_reg': [7],
-    'learning_rate': [0.07],
-    'n_estimators': [150],
+    'learning_rate': [0.06, 0.07, 0.08],
+    'n_estimators': [100, 150, 200],
     'bagging_temperature': [0.5],
     'border_count': [256],
     'random_strength': [0.7],
