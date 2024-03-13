@@ -1,21 +1,12 @@
-from catboost import CatBoostClassifier
 import numpy as np
 import pandas as pd
 import pickle
-from sklearn.cluster import KMeans
-from sklearn.impute import KNNImputer
-from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score,accuracy_score
-from imblearn.under_sampling import RandomUnderSampler
-from imblearn.over_sampling import RandomOverSampler
-
-from sklearn.pipeline import Pipeline
+from sklearn.ensemble import StackingClassifier
 
 with open("model.pickle", "rb") as file:
     model_dic = pickle.load(file)
 
-cluster_model: KMeans = model_dic['cluster_model']
-model: CatBoostClassifier = model_dic['model']
-inputer: KNNImputer = model_dic['inputer']
+model: StackingClassifier = model_dic['model']
 
 with open("columns.txt") as file:
     feature_cols = [line.rstrip() for line in file]
@@ -23,12 +14,7 @@ target_col = 'target'
 
 
 def predict(array: np.ndarray) -> tuple[np.ndarray,np.ndarray]:
-    # array = inputer.transform(array)
-    # cluster_values_array = cluster_model.predict(array)
-    # cluster_dummies_array = np.eye(cluster_model.n_clusters)[cluster_values_array]
-    # array = np.concatenate((array, cluster_dummies_array), axis=1)
-
-    prob = model.predict(array, prediction_type='Probability')
+    prob = model.predict_proba(array)
     prob = prob[:, 1]
 
     return (prob >= 0.5).astype(int), prob

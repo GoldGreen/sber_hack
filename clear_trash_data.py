@@ -18,7 +18,7 @@ model = CatBoostClassifier(auto_class_weights = 'Balanced',
 model.fit(df[feature_cols], df[target_col])
 
 feature_importance = model.feature_importances_
-important_columns = [col for col, importance in zip(feature_cols, feature_importance) if importance >=  0.05]
+important_columns = [col for col, importance in zip(feature_cols, feature_importance) if importance >=  0.1]
 
 removed_columns = df[feature_cols].columns.difference(important_columns).tolist()
 

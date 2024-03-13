@@ -1,50 +1,49 @@
-import pickle
+import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
+from sklearn.ensemble import StackingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score,accuracy_score
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
+from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import RandomOverSampler
-from imblearn.over_sampling import SMOTE
 from catboost import CatBoostClassifier
+import xgboost as xgb
+from sklearn.utils import class_weight
 
-df = pd.read_parquet('data/processed_data.parquet', engine='fastparquet')
+df = pd.read_parquet('data/untrashed_data.parquet', engine='fastparquet')
 
 target_col = 'target'
 feature_cols = [column for column in df.columns if column not in [target_col] ]
 
-kmeans = KMeans(n_clusters=9, n_init='auto')
-df['cluster'] = kmeans.fit_predict(df[feature_cols].values)
-df = pd.get_dummies(df, columns=['cluster'], prefix='cluster')
-feature_cols = [column for column in df.columns if column not in [target_col] ]
 
-x_train, x_val, y_train, y_val = train_test_split(df[feature_cols], df[target_col], test_size=0.1, random_state=30)
+x_train, x_val, y_train, y_val = train_test_split(df[feature_cols], df[target_col], test_size=0.2)
+
+
+xgb_model = xgb.XGBClassifier(learning_rate=0.035, max_depth = 5, subsample= 0.88, eval_metric='logloss')
 
 param_grid = {
-    'depth': [6],
-    'l2_leaf_reg': [7],
-    'learning_rate': [0.06, 0.07, 0.08],
-    'n_estimators': [100, 150, 200],
-    'bagging_temperature': [0.5],
-    'border_count': [256],
-    'random_strength': [0.7],
-    'subsample': [0.8],
-    'max_ctr_complexity': [1]
+    'learning_rate':[0.025, 0.035, 0.045],
+    'n_estimators':[500],
 }
 
-model = CatBoostClassifier(verbose=False, auto_class_weights='Balanced')
+grid = GridSearchCV(xgb_model, param_grid=param_grid, cv=5, n_jobs=-1, verbose=10, scoring='roc_auc')
 
-grid_search = GridSearchCV(model, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=10)
-grid_search.fit(x_train, y_train)
+class_weights=class_weight.compute_class_weight(
+    class_weight='balanced',
+    classes=np.unique(df[target_col]),
+    y=df[target_col]
+)
 
-best_model = grid_search.best_estimator_
+grid.fit(x_train, y_train, sample_weight=class_weights[y_train])
 
-print("Best Parameters:")
-print(grid_search.best_params_)
+model = grid.best_estimator_
+x_val, y_val = RandomUnderSampler().fit_resample(x_val, y_val)
 
-x_val, y_val = RandomOverSampler().fit_resample(x_val, y_val)
+y_pred = model.predict(x_val)
 
-y_pred = best_model.predict(x_val)
+print(grid.best_params_)
+
+print(f"[MODEL]: {type(model).__name__}")
 
 roc_auc = roc_auc_score(y_val, y_pred)
 accuracy = accuracy_score(y_val, y_pred)
