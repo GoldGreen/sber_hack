@@ -18,8 +18,9 @@ from sklearn.utils import class_weight
 
 df = pd.read_parquet('data/untrashed_data.parquet', engine='fastparquet')
 
+with open("columns.txt") as file:
+    feature_cols = [line.rstrip() for line in file]
 target_col = 'target'
-feature_cols = [column for column in df.columns if column not in [target_col] ]
 
 x_train, y_train = df[feature_cols], df[target_col]
 
