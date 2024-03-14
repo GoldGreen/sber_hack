@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.ensemble import StackingClassifier
 from sklearn.impute import KNNImputer
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, RidgeClassifier, RidgeClassifierCV
 from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score,accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
@@ -23,32 +23,34 @@ feature_cols = [column for column in df.columns if column not in [target_col] ]
 
 x_train, y_train = df[feature_cols], df[target_col]
 
-
+cat_boost_ratio = 1
 cat_boost_model = CatBoostClassifier(verbose=False,
-                           depth = 6,
+                           max_depth=6,
                            l2_leaf_reg = 7,
-                           learning_rate = 0.048,
-                           iterations=700,
+                           learning_rate = 0.046 * cat_boost_ratio,
+                           iterations=int(700 / cat_boost_ratio),
                            boosting_type='Plain',
                            bootstrap_type='Bernoulli',
                            subsample= 0.88,
                            rsm=0.88,
-                           random_strength = 0.7,
-                           leaf_estimation_iterations=5,
-                           max_ctr_complexity = 1,
+                           random_strength=0.7,
                            leaf_estimation_method='Newton')
 
-xgb_boost_model = xgb.XGBClassifier(learning_rate=0.098,
-                                    n_estimators=350,
-                                    max_depth = 5,
-                                    subsample= 0.93,
+xgb_ratio = 1
+xgb_boost_model = xgb.XGBClassifier(learning_rate=0.048 * xgb_ratio,
+                                    n_estimators=int(700 / xgb_ratio),
+                                    max_depth=5,
+                                    reg_alpha=7,
+                                    reg_lambda=1, 
+                                    subsample=0.88,
+                                    colsample_bytree=0.88,
                                     eval_metric='logloss')
 
 model  = StackingClassifier(
     estimators=[('cat', cat_boost_model), ('xgb', xgb_boost_model)],
     final_estimator=LogisticRegression(),
     verbose=10,
-    cv=3
+    cv=5
 )
 
 class_weights=class_weight.compute_class_weight(
